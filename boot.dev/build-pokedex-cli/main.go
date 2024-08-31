@@ -39,14 +39,15 @@ func commandExit() error {
 	return nil
 }
 
-func initCommandMap() {
+// This built-in feature allows us to do things before the main function is executed
+// This is run only once per package, but we can have as many init() functions as we want and they will all be executed
+// Pretty cool for simple cases like this
+func init() {
 	commandMap["help"] = command{"help", "Displays a help message", commandHelp}
 	commandMap["exit"] = command{"exit", "Exit the Pokedex", commandExit}
 }
 
 func main() {
-	initCommandMap()
-
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
