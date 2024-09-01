@@ -4,21 +4,33 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+
+	"github.com/mosamadeeb/pokedexcli/internal/pokeapi"
 )
 
-type command struct {
+type cliCommand struct {
 	name     string
 	usage    string
 	callback func() error
 }
 
-// This is used to determine the order of enumeration of the commands
-var commandList = []string{
-	"help", "exit",
-}
-
 // An initializer is not used to avoid a circular dependency with the [commandHelp] function
-var commandMap map[string]command = make(map[string]command)
+var cliCommandMap map[string]cliCommand = make(map[string]cliCommand)
+
+var mapPageConfig pokeapi.PageConfig
+
+func commandMap(prevPage bool) error {
+	areas, err := pokeapi.FetchLocationArea(&mapPageConfig, prevPage)
+	if err != nil {
+		return fmt.Errorf("could not fetch locations: %w", err)
+	}
+
+	for _, s := range areas {
+		fmt.Println(s)
+	}
+
+	return nil
+}
 
 func commandHelp() error {
 	fmt.Println()
@@ -26,8 +38,8 @@ func commandHelp() error {
 	fmt.Println("Usage:")
 	fmt.Println()
 
-	for _, com := range commandList {
-		fmt.Printf("%s: %s\n", com, commandMap[com].usage)
+	for _, com := range cliCommandList {
+		fmt.Printf("%s: %s\n", com, cliCommandMap[com].usage)
 	}
 
 	return nil
@@ -39,12 +51,21 @@ func commandExit() error {
 	return nil
 }
 
+// This is used to determine the order of enumeration of the commands
+var cliCommandList = []string{"map", "mapb", "help", "exit"}
+
 // This built-in feature allows us to do things before the main function is executed
 // This is run only once per package, but we can have as many init() functions as we want and they will all be executed
 // Pretty cool for simple cases like this
 func init() {
-	commandMap["help"] = command{"help", "Displays a help message", commandHelp}
-	commandMap["exit"] = command{"exit", "Exit the Pokedex", commandExit}
+	cliCommandMap["map"] = cliCommand{"map", "Displays the next 20 location areas", func() error {
+		return commandMap(false)
+	}}
+	cliCommandMap["mapb"] = cliCommand{"mapb", "Displays the previous 20 location areas", func() error {
+		return commandMap(true)
+	}}
+	cliCommandMap["help"] = cliCommand{"help", "Displays a help message", commandHelp}
+	cliCommandMap["exit"] = cliCommand{"exit", "Exit the Pokedex", commandExit}
 }
 
 func main() {
@@ -57,9 +78,12 @@ func main() {
 		scanner.Scan()
 		commandText := scanner.Text()
 
-		com, ok := commandMap[commandText]
+		com, ok := cliCommandMap[commandText]
 		if ok {
-			com.callback()
+			err := com.callback()
+			if err != nil {
+				fmt.Println("Error:", err)
+			}
 		} else {
 			fmt.Println("Unexpected command: ", commandText)
 			fmt.Println("Use the command \"help\" to see usage")
