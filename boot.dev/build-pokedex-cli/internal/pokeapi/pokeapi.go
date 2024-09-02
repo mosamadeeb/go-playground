@@ -30,6 +30,36 @@ func init() {
 	cache = pokecache.NewCache(cacheReapDuration)
 }
 
+func apiGet(url string) ([]byte, error) {
+	body, ok := cache.Get(url)
+
+	if ok {
+		return body, nil
+	}
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("http get request error: %w", err)
+	}
+
+	// Important: defer closing the body reader *after* checking for the error
+	// If the error is nil, the body will be already closed
+	// If the error is not nil, closing the body will allow us to reuse the connection
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected api response status: %s", resp.Status)
+	}
+
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %w", err)
+	}
+
+	cache.Add(url, body)
+	return body, nil
+}
+
 func FetchLocationArea(page *PageConfig, fetchPrevPage bool) ([]string, error) {
 	var url string
 	if fetchPrevPage {
@@ -47,28 +77,13 @@ func FetchLocationArea(page *PageConfig, fetchPrevPage bool) ([]string, error) {
 		}
 	}
 
-	body, ok := cache.Get(url)
-	if !ok {
-		resp, err := http.Get(url)
-		if err != nil {
-			return nil, fmt.Errorf("api get request error: %w", err)
-		}
-
-		// Important: defer closing the body reader *after* checking for the error
-		// If the error is nil, the body will be already closed
-		// If the error is not nil, closing the body will allow us to reuse the connection
-		defer resp.Body.Close()
-
-		body, err = io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("error reading response body: %w", err)
-		}
-
-		cache.Add(url, body)
+	body, err := apiGet(url)
+	if err != nil {
+		return nil, err
 	}
 
-	resData := resLocationArea{}
-	err := json.Unmarshal(body, &resData)
+	resData := resLocationAreaPage{}
+	err = json.Unmarshal(body, &resData)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing response data: %w", err)
 	}
@@ -82,4 +97,26 @@ func FetchLocationArea(page *PageConfig, fetchPrevPage bool) ([]string, error) {
 	}
 
 	return areas, nil
+}
+
+func QueryLocationAreaPokemon(locationArea string) ([]string, error) {
+	url := apiLocationArea + locationArea
+
+	body, err := apiGet(url)
+	if err != nil {
+		return nil, err
+	}
+
+	resData := resLocationArea{}
+	err = json.Unmarshal(body, &resData)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing response data: %w", err)
+	}
+
+	pokemon := make([]string, len(resData.PokemonEncounters))
+	for i, v := range resData.PokemonEncounters {
+		pokemon[i] = v.Pokemon.Name
+	}
+
+	return pokemon, nil
 }

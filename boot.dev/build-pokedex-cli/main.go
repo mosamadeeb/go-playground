@@ -2,8 +2,10 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/mosamadeeb/pokedexcli/internal/pokeapi"
 )
@@ -11,7 +13,7 @@ import (
 type cliCommand struct {
 	name     string
 	usage    string
-	callback func() error
+	callback func(args []string) error
 }
 
 // An initializer is not used to avoid a circular dependency with the [commandHelp] function
@@ -19,7 +21,11 @@ var cliCommandMap map[string]cliCommand = make(map[string]cliCommand)
 
 var mapPageConfig pokeapi.PageConfig
 
-func commandMap(prevPage bool) error {
+func commandMap(args []string, prevPage bool) error {
+	if len(args) != 0 {
+		return errors.New("command takes no arguments")
+	}
+
 	areas, err := pokeapi.FetchLocationArea(&mapPageConfig, prevPage)
 	if err != nil {
 		return fmt.Errorf("could not fetch locations: %w", err)
@@ -32,38 +38,68 @@ func commandMap(prevPage bool) error {
 	return nil
 }
 
-func commandHelp() error {
+func commandExplore(args []string) error {
+	if len(args) != 1 {
+		return errors.New("command takes only 1 argument")
+	}
+
+	locationArea := args[0]
+	fmt.Printf("Exploring %s...\n", locationArea)
+
+	pokemon, err := pokeapi.QueryLocationAreaPokemon(locationArea)
+	if err != nil {
+		return fmt.Errorf("could not query pokemon: %w", err)
+	}
+
+	fmt.Println("Found Pokemon:")
+	for _, p := range pokemon {
+		fmt.Println(" -", p)
+	}
+
+	return nil
+}
+
+func commandHelp(args []string) error {
+	if len(args) != 0 {
+		return errors.New("command takes no arguments")
+	}
+
 	fmt.Println()
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Println("Usage:")
 	fmt.Println()
 
 	for _, com := range cliCommandList {
-		fmt.Printf("%s: %s\n", com, cliCommandMap[com].usage)
+		fmt.Printf("%s: %s\n", cliCommandMap[com].name, cliCommandMap[com].usage)
 	}
 
 	return nil
 }
 
-func commandExit() error {
+func commandExit(args []string) error {
+	if len(args) != 0 {
+		return errors.New("command takes no arguments")
+	}
+
 	// Technically, a defer here makes no sense because the return value won't reach the caller anyway
 	defer os.Exit(0)
 	return nil
 }
 
 // This is used to determine the order of enumeration of the commands
-var cliCommandList = []string{"map", "mapb", "help", "exit"}
+var cliCommandList = []string{"map", "mapb", "explore", "help", "exit"}
 
 // This built-in feature allows us to do things before the main function is executed
 // This is run only once per package, but we can have as many init() functions as we want and they will all be executed
 // Pretty cool for simple cases like this
 func init() {
-	cliCommandMap["map"] = cliCommand{"map", "Displays the next 20 location areas", func() error {
-		return commandMap(false)
+	cliCommandMap["map"] = cliCommand{"map", "Displays the next 20 location areas", func(args []string) error {
+		return commandMap(args, false)
 	}}
-	cliCommandMap["mapb"] = cliCommand{"mapb", "Displays the previous 20 location areas", func() error {
-		return commandMap(true)
+	cliCommandMap["mapb"] = cliCommand{"mapb", "Displays the previous 20 location areas", func(args []string) error {
+		return commandMap(args, true)
 	}}
+	cliCommandMap["explore"] = cliCommand{"explore <area_name>", "Displays Pokemon found in a location area", commandExplore}
 	cliCommandMap["help"] = cliCommand{"help", "Displays a help message", commandHelp}
 	cliCommandMap["exit"] = cliCommand{"exit", "Exit the Pokedex", commandExit}
 }
@@ -76,11 +112,14 @@ func main() {
 
 		// We're scanning Stdin so no need to check if there are no tokens
 		scanner.Scan()
-		commandText := scanner.Text()
+
+		scannedText := strings.Split(scanner.Text(), " ")
+		commandText := scannedText[0]
+		commandArgs := scannedText[1:]
 
 		com, ok := cliCommandMap[commandText]
 		if ok {
-			err := com.callback()
+			err := com.callback(commandArgs)
 			if err != nil {
 				fmt.Println("Error:", err)
 			}
