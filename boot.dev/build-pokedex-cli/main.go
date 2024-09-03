@@ -23,6 +23,23 @@ var mapPageConfig pokeapi.PageConfig
 
 var pokemonMap map[string]pokeapi.Pokemon = make(map[string]pokeapi.Pokemon)
 
+func commandPokedex(args []string) error {
+	if len(args) != 0 {
+		return errors.New("command takes no arguments")
+	}
+
+	if len(pokemonMap) == 0 {
+		fmt.Println("Your Pokedex is empty! Go catch some Pokemon first.")
+	} else {
+		fmt.Println("Your Pokedex:")
+		for k := range pokemonMap {
+			fmt.Printf(" - %s\n", k)
+		}
+	}
+
+	return nil
+}
+
 func commandMap(args []string, prevPage bool) error {
 	if len(args) != 0 {
 		return errors.New("command takes no arguments")
@@ -75,6 +92,7 @@ func commandCatch(args []string) error {
 
 	if pokemon.TryCatch() {
 		fmt.Printf("%s was caught!\n", pokemon.Name)
+		fmt.Println("You may now inspect it with the inspect command.")
 		pokemonMap[pokemon.Name] = pokemon
 	} else {
 		fmt.Printf("%s escaped!\n", pokemon.Name)
@@ -139,12 +157,13 @@ func commandExit(args []string) error {
 }
 
 // This is used to determine the order of enumeration of the commands
-var cliCommandList = []string{"map", "mapb", "explore", "catch", "inspect", "help", "exit"}
+var cliCommandList = []string{"pokedex", "map", "mapb", "explore", "catch", "inspect", "help", "exit"}
 
 // This built-in feature allows us to do things before the main function is executed
 // This is run only once per package, but we can have as many init() functions as we want and they will all be executed
 // Pretty cool for simple cases like this
 func init() {
+	cliCommandMap["pokedex"] = cliCommand{"pokedex", "Displays all the Pokemon you caught before", commandPokedex}
 	cliCommandMap["map"] = cliCommand{"map", "Displays the next 20 location areas", func(args []string) error {
 		return commandMap(args, false)
 	}}
