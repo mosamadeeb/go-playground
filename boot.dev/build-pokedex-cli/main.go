@@ -21,6 +21,8 @@ var cliCommandMap map[string]cliCommand = make(map[string]cliCommand)
 
 var mapPageConfig pokeapi.PageConfig
 
+var pokemonMap map[string]pokeapi.Pokemon = make(map[string]pokeapi.Pokemon)
+
 func commandMap(args []string, prevPage bool) error {
 	if len(args) != 0 {
 		return errors.New("command takes no arguments")
@@ -64,8 +66,7 @@ func commandCatch(args []string) error {
 		return errors.New("command takes only 1 argument")
 	}
 
-	name := args[0]
-	pokemon, err := pokeapi.QueryPokemon(name)
+	pokemon, err := pokeapi.QueryPokemon(args[0])
 	if err != nil {
 		return fmt.Errorf("could not query pokemon: %w", err)
 	}
@@ -74,8 +75,37 @@ func commandCatch(args []string) error {
 
 	if pokemon.TryCatch() {
 		fmt.Printf("%s was caught!\n", pokemon.Name)
+		pokemonMap[pokemon.Name] = pokemon
 	} else {
 		fmt.Printf("%s escaped!\n", pokemon.Name)
+	}
+
+	return nil
+}
+
+func commandInspect(args []string) error {
+	if len(args) != 1 {
+		return errors.New("command takes only 1 argument")
+	}
+
+	pokemon, ok := pokemonMap[args[0]]
+	if !ok {
+		fmt.Println("You have not caught that pokemon")
+		return nil
+	}
+
+	fmt.Printf("Name: %v\n", pokemon.Name)
+	fmt.Printf("Height: %v\n", pokemon.Height)
+	fmt.Printf("Weight: %v\n", pokemon.Weight)
+
+	fmt.Println("Stats:")
+	for _, s := range pokemon.Stats {
+		fmt.Printf("  -%v: %v\n", s.Stat.Name, s.BaseStat)
+	}
+
+	fmt.Println("Types:")
+	for _, t := range pokemon.Types {
+		fmt.Printf("  - %v\n", t.Type.Name)
 	}
 
 	return nil
@@ -109,7 +139,7 @@ func commandExit(args []string) error {
 }
 
 // This is used to determine the order of enumeration of the commands
-var cliCommandList = []string{"map", "mapb", "explore", "catch", "help", "exit"}
+var cliCommandList = []string{"map", "mapb", "explore", "catch", "inspect", "help", "exit"}
 
 // This built-in feature allows us to do things before the main function is executed
 // This is run only once per package, but we can have as many init() functions as we want and they will all be executed
@@ -123,6 +153,7 @@ func init() {
 	}}
 	cliCommandMap["explore"] = cliCommand{"explore <area_name>", "Displays Pokemon found in a location area", commandExplore}
 	cliCommandMap["catch"] = cliCommand{"catch <pokemon_name>", "Attempts to catch a Pokemon", commandCatch}
+	cliCommandMap["inspect"] = cliCommand{"inspect <pokemon_name>", "Displays details about a caught Pokemon", commandInspect}
 	cliCommandMap["help"] = cliCommand{"help", "Displays a help message", commandHelp}
 	cliCommandMap["exit"] = cliCommand{"exit", "Exit the Pokedex", commandExit}
 }
