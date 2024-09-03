@@ -59,6 +59,28 @@ func commandExplore(args []string) error {
 	return nil
 }
 
+func commandCatch(args []string) error {
+	if len(args) != 1 {
+		return errors.New("command takes only 1 argument")
+	}
+
+	name := args[0]
+	pokemon, err := pokeapi.QueryPokemon(name)
+	if err != nil {
+		return fmt.Errorf("could not query pokemon: %w", err)
+	}
+
+	fmt.Printf("Throwing a Pokeball at %s...\n", pokemon.Name)
+
+	if pokemon.TryCatch() {
+		fmt.Printf("%s was caught!\n", pokemon.Name)
+	} else {
+		fmt.Printf("%s escaped!\n", pokemon.Name)
+	}
+
+	return nil
+}
+
 func commandHelp(args []string) error {
 	if len(args) != 0 {
 		return errors.New("command takes no arguments")
@@ -87,7 +109,7 @@ func commandExit(args []string) error {
 }
 
 // This is used to determine the order of enumeration of the commands
-var cliCommandList = []string{"map", "mapb", "explore", "help", "exit"}
+var cliCommandList = []string{"map", "mapb", "explore", "catch", "help", "exit"}
 
 // This built-in feature allows us to do things before the main function is executed
 // This is run only once per package, but we can have as many init() functions as we want and they will all be executed
@@ -100,6 +122,7 @@ func init() {
 		return commandMap(args, true)
 	}}
 	cliCommandMap["explore"] = cliCommand{"explore <area_name>", "Displays Pokemon found in a location area", commandExplore}
+	cliCommandMap["catch"] = cliCommand{"catch <pokemon_name>", "Attempts to catch a Pokemon", commandCatch}
 	cliCommandMap["help"] = cliCommand{"help", "Displays a help message", commandHelp}
 	cliCommandMap["exit"] = cliCommand{"exit", "Exit the Pokedex", commandExit}
 }

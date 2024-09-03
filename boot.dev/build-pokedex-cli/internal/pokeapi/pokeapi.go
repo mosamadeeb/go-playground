@@ -14,6 +14,7 @@ import (
 const (
 	apiBase         = "https://pokeapi.co/api/v2/"
 	apiLocationArea = apiBase + "location-area/"
+	apiPokemon      = apiBase + "pokemon/"
 	pageSize        = 20
 
 	cacheReapDuration = 5 * time.Minute
@@ -116,6 +117,24 @@ func QueryLocationAreaPokemon(locationArea string) ([]string, error) {
 	pokemon := make([]string, len(resData.PokemonEncounters))
 	for i, v := range resData.PokemonEncounters {
 		pokemon[i] = v.Pokemon.Name
+	}
+
+	return pokemon, nil
+}
+
+func QueryPokemon(name string) (Pokemon, error) {
+	url := apiPokemon + name
+
+	var pokemon Pokemon
+
+	body, err := apiGet(url)
+	if err != nil {
+		return pokemon, err
+	}
+
+	err = json.Unmarshal(body, &pokemon)
+	if err != nil {
+		return pokemon, fmt.Errorf("error parsing response data: %w", err)
 	}
 
 	return pokemon, nil
