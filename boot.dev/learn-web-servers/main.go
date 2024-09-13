@@ -40,16 +40,19 @@ func main() {
 		Addr:    ":8080",
 	}
 
-	// Serve files in local directory without the /app prefix
+	// Serve files in local directory without the /app prefix (namespace)
 	fileServerHandler := http.StripPrefix("/app", http.FileServer(http.Dir(".")))
+
+	// Handle the entire /app/ path tree
+	// This means not only /app, but also all subtrees under that path
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(fileServerHandler))
 
 	// Metrics
-	mux.Handle("GET /metrics", apiCfg.metricsHandler())
-	mux.Handle("/reset", apiCfg.resetHandler())
+	mux.Handle("GET /api/metrics", apiCfg.metricsHandler())
+	mux.Handle("/api/reset", apiCfg.resetHandler())
 
 	// Readiness endpoint
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
 		// Write status code before writing body
