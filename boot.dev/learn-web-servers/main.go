@@ -12,8 +12,17 @@ func main() {
 		Addr:    ":8080",
 	}
 
-	// Serve files in local directory
-	mux.Handle("/", http.FileServer(http.Dir(".")))
+	// Serve files in local directory without the /app prefix
+	mux.Handle("/app/", http.StripPrefix("/app", http.FileServer(http.Dir("."))))
+
+	// Readiness endpoint
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+
+		// Write status code before writing body
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
 
 	// Channel for knowing when the server wants to stop
 	stopChan := make(chan struct{})
