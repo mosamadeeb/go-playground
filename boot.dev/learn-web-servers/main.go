@@ -44,11 +44,12 @@ func main() {
 	fileServerHandler := http.StripPrefix("/app", http.FileServer(http.Dir(".")))
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(fileServerHandler))
 
-	mux.Handle("/metrics", apiCfg.metricsHandler())
+	// Metrics
+	mux.Handle("GET /metrics", apiCfg.metricsHandler())
 	mux.Handle("/reset", apiCfg.resetHandler())
 
 	// Readiness endpoint
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
 		// Write status code before writing body
