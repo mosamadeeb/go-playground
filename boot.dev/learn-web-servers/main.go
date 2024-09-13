@@ -19,15 +19,23 @@ func (c *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 }
 
 // We can return a handler by wrapping a function with an appropriate signature with http.HandlerFunc()
-func (c *apiConfig) metricsHandler() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(fmt.Sprintf("Hits: %v", c.fileserverHits)))
-	})
-}
-
 func (c *apiConfig) resetHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c.fileserverHits = 0
+	})
+}
+
+func (c *apiConfig) adminMetricsHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(fmt.Sprintf(`<html>
+
+<body>
+    <h1>Welcome, Chirpy Admin</h1>
+    <p>Chirpy has been visited %d times!</p>
+</body>
+
+</html>`, c.fileserverHits)))
 	})
 }
 
@@ -47,8 +55,10 @@ func main() {
 	// This means not only /app, but also all subtrees under that path
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(fileServerHandler))
 
+	// Admin namespace
+	mux.Handle("GET /admin/metrics", apiCfg.adminMetricsHandler())
+
 	// Metrics
-	mux.Handle("GET /api/metrics", apiCfg.metricsHandler())
 	mux.Handle("/api/reset", apiCfg.resetHandler())
 
 	// Readiness endpoint
