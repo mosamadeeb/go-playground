@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -13,12 +12,16 @@ func main() {
 		Addr:    ":8080",
 	}
 
+	// Serve files in local directory
+	mux.Handle("/", http.FileServer(http.Dir(".")))
+
 	// Channel for knowing when the server wants to stop
 	stopChan := make(chan struct{})
 	go func() {
 		err := serve.ListenAndServe()
 		if err != nil {
-			log.Fatal(err)
+			// ListenAndServe never returns nil
+			fmt.Println(err)
 		}
 
 		stopChan <- struct{}{}
