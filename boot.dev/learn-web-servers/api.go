@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/mosamadeeb/chirpy/internal/chirpydb"
@@ -63,6 +64,31 @@ func handleApi(mux *http.ServeMux, apiCfg *apiConfig, db *chirpydb.DB) {
 		}
 
 		respondWithJSON(w, http.StatusOK, chirps)
+	})
+
+	mux.HandleFunc("GET /api/chirps/{chirpID}", func(w http.ResponseWriter, r *http.Request) {
+		chirpId, err := strconv.Atoi(r.PathValue("chirpID"))
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		chirps, err := db.GetChirps()
+		if err != nil {
+			log.Printf("Error loading chirps from database: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		// The chirps are sorted by ID so we can do a binary search
+		index, ok := slices.BinarySearchFunc(chirps, chirpydb.Chirp{Id: chirpId}, func(a, b chirpydb.Chirp) int { return a.Id - b.Id })
+
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		respondWithJSON(w, http.StatusOK, chirps[index])
 	})
 }
 

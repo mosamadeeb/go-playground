@@ -61,7 +61,7 @@ func (db *DB) CreateChirp(body string) (Chirp, error) {
 	return chirp, nil
 }
 
-// Returns all chirps in the database
+// Returns all chirps in the database, sorted by ID
 func (db *DB) GetChirps() ([]Chirp, error) {
 	dbStruct, err := db.loadDB()
 	if err != nil {
