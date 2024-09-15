@@ -4,21 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"os"
-	"slices"
 	"sync"
 )
-
-type Chirp struct {
-	Id   int    `json:"id"`
-	Body string `json:"body"`
-}
-
-type User struct {
-	Id    int    `json:"id"`
-	Email string `json:"email"`
-}
 
 type DBMap[T any] struct {
 	IdCount int       `json:"id_count"`
@@ -47,64 +35,6 @@ func NewDB(path string) (*DB, error) {
 	}
 
 	return db, nil
-}
-
-// Creates a new chirp and saves it to disk
-func (db *DB) CreateChirp(body string) (Chirp, error) {
-	dbStruct, err := db.loadDB()
-	if err != nil {
-		return Chirp{}, err
-	}
-
-	chirp := Chirp{
-		dbStruct.Chirps.IdCount,
-		body,
-	}
-
-	dbStruct.Chirps.IdCount++
-	dbStruct.Chirps.Items[chirp.Id] = chirp
-
-	if err := db.writeDB(dbStruct); err != nil {
-		return Chirp{}, err
-	}
-
-	return chirp, nil
-}
-
-// Creates a new user and saves it to disk
-func (db *DB) CreateUser(email string) (User, error) {
-	dbStruct, err := db.loadDB()
-	if err != nil {
-		return User{}, err
-	}
-
-	user := User{
-		dbStruct.Users.IdCount,
-		email,
-	}
-
-	dbStruct.Users.IdCount++
-	dbStruct.Users.Items[user.Id] = user
-
-	if err := db.writeDB(dbStruct); err != nil {
-		return User{}, err
-	}
-
-	return user, nil
-}
-
-// Returns all chirps in the database, sorted by ID
-func (db *DB) GetChirps() ([]Chirp, error) {
-	dbStruct, err := db.loadDB()
-	if err != nil {
-		return []Chirp{}, err
-	}
-
-	chirps := slices.SortedFunc(maps.Values(dbStruct.Chirps.Items), func(a, b Chirp) int {
-		return a.Id - b.Id
-	})
-
-	return chirps, nil
 }
 
 // Creates a new database file if it doesn't exist
