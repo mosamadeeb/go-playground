@@ -55,7 +55,7 @@ func respondWithError(w http.ResponseWriter, code int, msg string) {
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	resp, err := json.Marshal(payload)
 	if err != nil {
-		log.Printf("Error encoding %T response: %s", payload, err)
+		log.Printf("Error encoding %T response: %v\n", payload, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

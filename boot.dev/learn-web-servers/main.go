@@ -16,7 +16,7 @@ func main() {
 	// Make sure the database file exists
 	db, err := chirpydb.NewDB("./database.json", *dbg)
 	if err != nil {
-		log.Fatalf("could not create database connection: %v", err)
+		log.Fatalf("could not create database connection: %v\n", err)
 	}
 
 	state := newServerState(http.NewServeMux(), &apiConfig{}, db)

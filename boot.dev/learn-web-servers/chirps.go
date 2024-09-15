@@ -15,7 +15,7 @@ func (s serverState) handleChirpsApi() {
 	s.Mux.HandleFunc("POST /api/chirps", func(w http.ResponseWriter, r *http.Request) {
 		var chirpReq chirpydb.Chirp
 		if err := json.NewDecoder(r.Body).Decode(&chirpReq); err != nil {
-			log.Printf("Error decoding chirp body: %v", err)
+			log.Printf("Error decoding chirp body: %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -27,7 +27,7 @@ func (s serverState) handleChirpsApi() {
 
 		chirp, err := s.DB.CreateChirp(cleanChirp(chirpReq.Body))
 		if err != nil {
-			log.Printf("Error saving chirp to database: %v", err)
+			log.Printf("Error saving chirp to database: %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -38,7 +38,7 @@ func (s serverState) handleChirpsApi() {
 	s.Mux.HandleFunc("GET /api/chirps", func(w http.ResponseWriter, r *http.Request) {
 		chirps, err := s.DB.GetChirps()
 		if err != nil {
-			log.Printf("Error loading chirps from database: %v", err)
+			log.Printf("Error loading chirps from database: %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -55,7 +55,7 @@ func (s serverState) handleChirpsApi() {
 
 		chirps, err := s.DB.GetChirps()
 		if err != nil {
-			log.Printf("Error loading chirps from database: %v", err)
+			log.Printf("Error loading chirps from database: %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
