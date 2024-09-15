@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 )
@@ -24,7 +25,14 @@ type DB struct {
 }
 
 // Creates a new database connection and creates the database file if it doesn't exist
-func NewDB(path string) (*DB, error) {
+func NewDB(path string, debug bool) (*DB, error) {
+	if debug {
+		if err := os.Remove(path); err != nil {
+			// Log the error and continue
+			log.Printf("could not remove test database: %v", err)
+		}
+	}
+
 	db := &DB{
 		path,
 		&sync.RWMutex{},

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,8 +10,11 @@ import (
 )
 
 func main() {
+	dbg := flag.Bool("debug", false, "Enable debug mode")
+	flag.Parse()
+
 	// Make sure the database file exists
-	db, err := chirpydb.NewDB("./database.json")
+	db, err := chirpydb.NewDB("./database.json", *dbg)
 	if err != nil {
 		log.Fatalf("could not create database connection: %v", err)
 	}
