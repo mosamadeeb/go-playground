@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -19,6 +21,52 @@ func handleApi(mux *http.ServeMux, apiCfg *apiConfig) {
 		// Write status code before writing body
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
+	})
+
+	// Chirp validation endpoint
+	mux.HandleFunc("POST /api/validate_chirp", func(w http.ResponseWriter, r *http.Request) {
+		var chirpBody struct {
+			Body string `json:"body"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&chirpBody); err != nil {
+			log.Printf("Error decoding chirp body: %s", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		type errorResp struct {
+			ErrorMsg string `json:"error"`
+		}
+
+		if len(chirpBody.Body) > 140 {
+			resp, err := json.Marshal(errorResp{"Chirp is too long"})
+			if err != nil {
+				log.Printf("Error encoding error response: %s", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write(resp)
+			return
+		}
+
+		type validResp struct {
+			Valid bool `json:"valid"`
+		}
+
+		resp, err := json.Marshal(validResp{true})
+		if err != nil {
+			log.Printf("Error encoding valid response: %s", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(resp)
 	})
 }
 
