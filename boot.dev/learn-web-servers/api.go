@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+
+	"github.com/mosamadeeb/chirpy/internal/chirpydb"
 )
 
-func handleApi(mux *http.ServeMux, apiCfg *apiConfig) {
+func handleApi(mux *http.ServeMux, apiCfg *apiConfig, db *chirpydb.DB) {
 	// Admin namespace
 	mux.Handle("GET /admin/metrics", apiCfg.adminMetricsHandler())
 
@@ -25,14 +27,14 @@ func handleApi(mux *http.ServeMux, apiCfg *apiConfig) {
 		w.Write([]byte("OK"))
 	})
 
-	// Chirp validation endpoint
-	mux.HandleFunc("POST /api/validate_chirp", func(w http.ResponseWriter, r *http.Request) {
+	// Chirp CRUD endpoints
+	mux.HandleFunc("POST /api/chirps", func(w http.ResponseWriter, r *http.Request) {
 		var chirpBody struct {
 			Body string `json:"body"`
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&chirpBody); err != nil {
-			log.Printf("Error decoding chirp body: %s", err)
+			log.Printf("Error decoding chirp body: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -42,11 +44,25 @@ func handleApi(mux *http.ServeMux, apiCfg *apiConfig) {
 			return
 		}
 
-		type cleanedResp struct {
-			Body string `json:"cleaned_body"`
+		chirp, err := db.CreateChirp(cleanChirp(chirpBody.Body))
+		if err != nil {
+			log.Printf("Error saving chirp to database: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 
-		respondWithJSON(w, http.StatusOK, cleanedResp{cleanChirp(chirpBody.Body)})
+		respondWithJSON(w, http.StatusCreated, chirp)
+	})
+
+	mux.HandleFunc("GET /api/chirps", func(w http.ResponseWriter, r *http.Request) {
+		chirps, err := db.GetChirps()
+		if err != nil {
+			log.Printf("Error loading chirps from database: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		respondWithJSON(w, http.StatusOK, chirps)
 	})
 }
 
