@@ -15,6 +15,11 @@ type Chirp struct {
 	Body string `json:"body"`
 }
 
+type User struct {
+	Id    int    `json:"id"`
+	Email string `json:"email"`
+}
+
 type DBMap[T any] struct {
 	IdCount int       `json:"id_count"`
 	Items   map[int]T `json:"items"`
@@ -22,6 +27,7 @@ type DBMap[T any] struct {
 
 type DBStructure struct {
 	Chirps DBMap[Chirp] `json:"chirps"`
+	Users  DBMap[User]  `json:"users"`
 }
 
 type DB struct {
@@ -65,6 +71,28 @@ func (db *DB) CreateChirp(body string) (Chirp, error) {
 	return chirp, nil
 }
 
+// Creates a new user and saves it to disk
+func (db *DB) CreateUser(email string) (User, error) {
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+
+	user := User{
+		dbStruct.Users.IdCount,
+		email,
+	}
+
+	dbStruct.Users.IdCount++
+	dbStruct.Users.Items[user.Id] = user
+
+	if err := db.writeDB(dbStruct); err != nil {
+		return User{}, err
+	}
+
+	return user, nil
+}
+
 // Returns all chirps in the database, sorted by ID
 func (db *DB) GetChirps() ([]Chirp, error) {
 	dbStruct, err := db.loadDB()
@@ -88,6 +116,7 @@ func (db *DB) ensureDB() error {
 	} else if errors.Is(err, os.ErrNotExist) {
 		data, err := json.Marshal(DBStructure{
 			DBMap[Chirp]{1, map[int]Chirp{}},
+			DBMap[User]{1, map[int]User{}},
 		})
 		if err != nil {
 			return fmt.Errorf("error marshalling database json: %w", err)

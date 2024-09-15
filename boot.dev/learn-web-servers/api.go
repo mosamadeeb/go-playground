@@ -30,22 +30,19 @@ func handleApi(mux *http.ServeMux, apiCfg *apiConfig, db *chirpydb.DB) {
 
 	// Chirp CRUD endpoints
 	mux.HandleFunc("POST /api/chirps", func(w http.ResponseWriter, r *http.Request) {
-		var chirpBody struct {
-			Body string `json:"body"`
-		}
-
-		if err := json.NewDecoder(r.Body).Decode(&chirpBody); err != nil {
+		var chirpReq chirpydb.Chirp
+		if err := json.NewDecoder(r.Body).Decode(&chirpReq); err != nil {
 			log.Printf("Error decoding chirp body: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		if len(chirpBody.Body) > 140 {
+		if len(chirpReq.Body) > 140 {
 			respondWithError(w, http.StatusBadRequest, "Chirp is too long")
 			return
 		}
 
-		chirp, err := db.CreateChirp(cleanChirp(chirpBody.Body))
+		chirp, err := db.CreateChirp(cleanChirp(chirpReq.Body))
 		if err != nil {
 			log.Printf("Error saving chirp to database: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -89,6 +86,24 @@ func handleApi(mux *http.ServeMux, apiCfg *apiConfig, db *chirpydb.DB) {
 		}
 
 		respondWithJSON(w, http.StatusOK, chirps[index])
+	})
+
+	mux.HandleFunc("POST /api/users", func(w http.ResponseWriter, r *http.Request) {
+		var userReq chirpydb.User
+		if err := json.NewDecoder(r.Body).Decode(&userReq); err != nil {
+			log.Printf("Error decoding chirp body: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		user, err := db.CreateUser(userReq.Email)
+		if err != nil {
+			log.Printf("Error saving user to database: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		respondWithJSON(w, http.StatusCreated, user)
 	})
 }
 
