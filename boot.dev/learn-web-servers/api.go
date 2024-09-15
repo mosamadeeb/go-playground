@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"slices"
+	"strings"
 )
 
 func handleApi(mux *http.ServeMux, apiCfg *apiConfig) {
@@ -53,11 +55,19 @@ func handleApi(mux *http.ServeMux, apiCfg *apiConfig) {
 			return
 		}
 
-		type validResp struct {
-			Valid bool `json:"valid"`
+		type cleanedResp struct {
+			Body string `json:"cleaned_body"`
 		}
 
-		resp, err := json.Marshal(validResp{true})
+		badWords := []string{"kerfuffle", "sharbert", "fornax"}
+		words := strings.Split(chirpBody.Body, " ")
+		for i, word := range words {
+			if slices.Contains(badWords, strings.ToLower(word)) {
+				words[i] = "****"
+			}
+		}
+
+		resp, err := json.Marshal(cleanedResp{strings.Join(words, " ")})
 		if err != nil {
 			log.Printf("Error encoding valid response: %s", err)
 			w.WriteHeader(http.StatusInternalServerError)
