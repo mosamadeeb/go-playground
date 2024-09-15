@@ -15,9 +15,13 @@ type Chirp struct {
 	Body string `json:"body"`
 }
 
+type DBMap[T any] struct {
+	IdCount int       `json:"id_count"`
+	Items   map[int]T `json:"items"`
+}
+
 type DBStructure struct {
-	IdCount int           `json:"id_count"`
-	Chirps  map[int]Chirp `json:"chirps"`
+	Chirps DBMap[Chirp] `json:"chirps"`
 }
 
 type DB struct {
@@ -47,12 +51,12 @@ func (db *DB) CreateChirp(body string) (Chirp, error) {
 	}
 
 	chirp := Chirp{
-		dbStruct.IdCount,
+		dbStruct.Chirps.IdCount,
 		body,
 	}
 
-	dbStruct.IdCount++
-	dbStruct.Chirps[chirp.Id] = chirp
+	dbStruct.Chirps.IdCount++
+	dbStruct.Chirps.Items[chirp.Id] = chirp
 
 	if err := db.writeDB(dbStruct); err != nil {
 		return Chirp{}, err
@@ -68,7 +72,7 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 		return []Chirp{}, err
 	}
 
-	chirps := slices.SortedFunc(maps.Values(dbStruct.Chirps), func(a, b Chirp) int {
+	chirps := slices.SortedFunc(maps.Values(dbStruct.Chirps.Items), func(a, b Chirp) int {
 		return a.Id - b.Id
 	})
 
@@ -82,7 +86,9 @@ func (db *DB) ensureDB() error {
 		file.Close()
 		return nil
 	} else if errors.Is(err, os.ErrNotExist) {
-		data, err := json.Marshal(DBStructure{1, map[int]Chirp{}})
+		data, err := json.Marshal(DBStructure{
+			DBMap[Chirp]{1, map[int]Chirp{}},
+		})
 		if err != nil {
 			return fmt.Errorf("error marshalling database json: %w", err)
 		}
