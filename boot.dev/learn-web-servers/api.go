@@ -37,21 +37,8 @@ func handleApi(mux *http.ServeMux, apiCfg *apiConfig) {
 			return
 		}
 
-		type errorResp struct {
-			ErrorMsg string `json:"error"`
-		}
-
 		if len(chirpBody.Body) > 140 {
-			resp, err := json.Marshal(errorResp{"Chirp is too long"})
-			if err != nil {
-				log.Printf("Error encoding error response: %s", err)
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write(resp)
+			respondWithError(w, http.StatusBadRequest, "Chirp is too long")
 			return
 		}
 
@@ -59,25 +46,46 @@ func handleApi(mux *http.ServeMux, apiCfg *apiConfig) {
 			Body string `json:"cleaned_body"`
 		}
 
-		badWords := []string{"kerfuffle", "sharbert", "fornax"}
-		words := strings.Split(chirpBody.Body, " ")
-		for i, word := range words {
-			if slices.Contains(badWords, strings.ToLower(word)) {
-				words[i] = "****"
-			}
-		}
-
-		resp, err := json.Marshal(cleanedResp{strings.Join(words, " ")})
-		if err != nil {
-			log.Printf("Error encoding valid response: %s", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write(resp)
+		respondWithJSON(w, http.StatusOK, cleanedResp{cleanChirp(chirpBody.Body)})
 	})
+}
+
+func respondWithError(w http.ResponseWriter, code int, msg string) {
+	type errorResp struct {
+		ErrorMsg string `json:"error"`
+	}
+
+	if len(msg) == 0 {
+		w.WriteHeader(code)
+	} else {
+		respondWithJSON(w, code, errorResp{msg})
+	}
+}
+
+func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+	resp, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Error encoding %T response: %s", payload, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	w.Write(resp)
+}
+
+func cleanChirp(body string) string {
+	badWords := []string{"kerfuffle", "sharbert", "fornax"}
+
+	words := strings.Split(body, " ")
+	for i, word := range words {
+		if slices.Contains(badWords, strings.ToLower(word)) {
+			words[i] = "****"
+		}
+	}
+
+	return strings.Join(words, " ")
 }
 
 type apiConfig struct {
