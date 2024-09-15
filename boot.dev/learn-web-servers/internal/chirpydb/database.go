@@ -69,17 +69,7 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 	}
 
 	chirps := slices.SortedFunc(maps.Values(dbStruct.Chirps), func(a, b Chirp) int {
-		switch {
-		case a.Id < b.Id:
-			return -1
-		case a.Id == b.Id:
-			return 0
-		case a.Id > b.Id:
-			return 1
-		default:
-			// Have to put something here, but this is unreachable
-			return 0
-		}
+		return a.Id - b.Id
 	})
 
 	return chirps, nil
