@@ -5,11 +5,15 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
+	"github.com/joho/godotenv"
 	chirpydb "github.com/mosamadeeb/chirpy/internal/chirpydb"
 )
 
 func main() {
+	godotenv.Load()
+
 	dbg := flag.Bool("debug", false, "Enable debug mode")
 	flag.Parse()
 
@@ -19,7 +23,8 @@ func main() {
 		log.Fatalf("could not create database connection: %v\n", err)
 	}
 
-	state := newServerState(http.NewServeMux(), &apiConfig{}, db)
+	jwtSecret := os.Getenv("JWT_SECRET")
+	state := newServerState(http.NewServeMux(), &apiConfig{jwtSecret: jwtSecret}, db)
 
 	serve := http.Server{
 		Handler: state.Mux,
