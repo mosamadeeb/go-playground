@@ -35,6 +35,8 @@ func (s serverState) handleApi() {
 		w.Write([]byte("OK"))
 	})
 
+	s.handleAuthApi()
+
 	// CRUD endpoints
 	s.handleChirpsApi()
 	s.handleUsersApi()

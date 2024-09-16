@@ -9,6 +9,11 @@ import (
 	"sync"
 )
 
+var (
+	ErrExists   = errors.New("entity already exists")
+	ErrNotExist = errors.New("entity does not exist")
+)
+
 type DBMap[T any] struct {
 	IdCount int       `json:"id_count"`
 	Items   map[int]T `json:"items"`
