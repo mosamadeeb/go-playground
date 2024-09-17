@@ -6,9 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/mosamadeeb/chirpy/internal/chirpydb"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -57,20 +55,7 @@ func (s serverState) handleUsersApi() {
 	})
 
 	s.Mux.HandleFunc("PUT /api/users", func(w http.ResponseWriter, r *http.Request) {
-		tokenString, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if !ok {
-			// Idk if we should be logging the possible JWT...
-			log.Printf("Unexpected authorization header format: %v\n", r.Header.Get("Authorization"))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(t *jwt.Token) (interface{}, error) {
-			if t.Method.Alg() != jwt.SigningMethodHS256.Alg() {
-				return nil, errors.New("unexpected signing method")
-			}
-			return []byte(s.ApiCfg.jwtSecret), nil
-		})
+		token, err := authenticateJWT(r, s.ApiCfg.jwtSecret)
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			return

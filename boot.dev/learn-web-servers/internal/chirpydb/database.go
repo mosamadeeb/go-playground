@@ -22,6 +22,8 @@ type DBMap[T any] struct {
 type DBStructure struct {
 	Chirps DBMap[Chirp] `json:"chirps"`
 	Users  DBMap[User]  `json:"users"`
+
+	RefreshTokens map[string]RefreshToken `json:"refresh_tokens"`
 }
 
 type DB struct {
@@ -60,6 +62,7 @@ func (db *DB) ensureDB() error {
 		data, err := json.Marshal(DBStructure{
 			DBMap[Chirp]{1, map[int]Chirp{}},
 			DBMap[User]{1, map[int]User{}},
+			map[string]RefreshToken{},
 		})
 		if err != nil {
 			return fmt.Errorf("error marshalling database json: %w", err)
