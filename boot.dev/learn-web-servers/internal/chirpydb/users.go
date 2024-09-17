@@ -15,11 +15,13 @@ type User struct {
 // Creates a new user and saves it to disk
 func (db *DB) CreateUser(email string, password string) (User, error) {
 	_, err := db.GetUserByEmail(email)
-	if err == nil {
-		// Entity already exists
-		return User{}, ErrExists
-	} else if !errors.Is(err, ErrNotExist) {
-		return User{}, err
+	if !errors.Is(err, ErrNotExist) {
+		if err == nil {
+			// Entity already exists
+			return User{}, ErrExists
+		} else {
+			return User{}, err
+		}
 	}
 
 	dbStruct, err := db.loadDB()
@@ -59,6 +61,15 @@ func (db *DB) GetUserByEmail(email string) (User, error) {
 }
 
 func (db *DB) UpdateUser(id int, email, password string) (User, error) {
+	_, err := db.GetUserByEmail(email)
+	if !errors.Is(err, ErrNotExist) {
+		if err == nil {
+			return User{}, ErrExists
+		} else {
+			return User{}, err
+		}
+	}
+
 	dbStruct, err := db.loadDB()
 	if err != nil {
 		return User{}, err

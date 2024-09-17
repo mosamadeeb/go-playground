@@ -46,6 +46,12 @@ func (s serverState) handleUsersApi() {
 
 		user, err := s.DB.CreateUser(userReq.Email, string(encPassword))
 		if err != nil {
+			if errors.Is(err, chirpydb.ErrExists) {
+				// Email already used
+				w.WriteHeader(http.StatusConflict)
+				return
+			}
+
 			log.Printf("Error saving user to database: %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -98,6 +104,12 @@ func (s serverState) handleUsersApi() {
 			if errors.Is(err, chirpydb.ErrNotExist) {
 				// Ah yes, user must have deleted their account and *then* proceeded to update their credentials
 				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+
+			if errors.Is(err, chirpydb.ErrExists) {
+				// Email already used
+				w.WriteHeader(http.StatusConflict)
 				return
 			}
 
