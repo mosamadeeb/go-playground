@@ -13,6 +13,26 @@ import (
 
 func (s serverState) handleChirpsApi() {
 	s.Mux.HandleFunc("POST /api/chirps", func(w http.ResponseWriter, r *http.Request) {
+		token, err := authenticateJWT(r, s.ApiCfg.jwtSecret)
+		if err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		idStr, err := token.Claims.GetSubject()
+		if err != nil {
+			log.Printf("Could not get user ID from JWT: %v\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		userId, err := strconv.Atoi(idStr)
+		if err != nil {
+			log.Printf("Could not get user ID from JWT: %v\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
 		var chirpReq chirpydb.Chirp
 		if err := json.NewDecoder(r.Body).Decode(&chirpReq); err != nil {
 			log.Printf("Error decoding chirp body: %v\n", err)
@@ -25,7 +45,7 @@ func (s serverState) handleChirpsApi() {
 			return
 		}
 
-		chirp, err := s.DB.CreateChirp(cleanChirp(chirpReq.Body))
+		chirp, err := s.DB.CreateChirp(cleanChirp(chirpReq.Body), userId)
 		if err != nil {
 			log.Printf("Error saving chirp to database: %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
