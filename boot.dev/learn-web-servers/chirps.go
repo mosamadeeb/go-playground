@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"slices"
@@ -73,22 +74,72 @@ func (s serverState) handleChirpsApi() {
 			return
 		}
 
-		chirps, err := s.DB.GetChirps()
+		chirp, err := s.DB.GetChirp(chirpId)
 		if err != nil {
-			log.Printf("Error loading chirps from database: %v\n", err)
+			if errors.Is(err, chirpydb.ErrNotExist) {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+
+			log.Printf("Error loading chirp from database: %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		// The chirps are sorted by ID so we can do a binary search
-		index, ok := slices.BinarySearchFunc(chirps, chirpydb.Chirp{Id: chirpId}, func(a, b chirpydb.Chirp) int { return a.Id - b.Id })
+		respondWithJSON(w, http.StatusOK, chirp)
+	})
 
-		if !ok {
-			w.WriteHeader(http.StatusNotFound)
+	s.Mux.HandleFunc("DELETE /api/chirps/{chirpID}", func(w http.ResponseWriter, r *http.Request) {
+		token, err := authenticateJWT(r, s.ApiCfg.jwtSecret)
+		if err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
-		respondWithJSON(w, http.StatusOK, chirps[index])
+		idStr, err := token.Claims.GetSubject()
+		if err != nil {
+			log.Printf("Could not get user ID from JWT: %v\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		userId, err := strconv.Atoi(idStr)
+		if err != nil {
+			log.Printf("Could not get user ID from JWT: %v\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		chirpId, err := strconv.Atoi(r.PathValue("chirpID"))
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		chirp, err := s.DB.GetChirp(chirpId)
+		if err != nil {
+			if errors.Is(err, chirpydb.ErrNotExist) {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+
+			log.Printf("Error loading chirp from database: %v\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if userId != chirp.AuthorId {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		err = s.DB.DeleteChirp(chirpId)
+		if err != nil && !errors.Is(err, chirpydb.ErrNotExist) {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
 	})
 }
 
