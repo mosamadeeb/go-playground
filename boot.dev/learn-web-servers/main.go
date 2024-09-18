@@ -24,7 +24,8 @@ func main() {
 	}
 
 	jwtSecret := os.Getenv("JWT_SECRET")
-	state := newServerState(http.NewServeMux(), &apiConfig{jwtSecret: jwtSecret}, db)
+	polkaApi := os.Getenv("POLKA_API")
+	state := newServerState(http.NewServeMux(), &apiConfig{jwtSecret: jwtSecret, polkaApi: polkaApi}, db)
 
 	serve := http.Server{
 		Handler: state.Mux,

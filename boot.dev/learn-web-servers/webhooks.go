@@ -5,12 +5,19 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/mosamadeeb/chirpy/internal/chirpydb"
 )
 
 func (s serverState) handleWebhooks() {
 	s.Mux.HandleFunc("POST /api/polka/webhooks", func(w http.ResponseWriter, r *http.Request) {
+		apiKey, ok := strings.CutPrefix(r.Header.Get("Authorization"), "ApiKey ")
+		if !ok || apiKey != s.ApiCfg.polkaApi {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
 		var req struct {
 			Event string `json:"event"`
 			Data  struct {

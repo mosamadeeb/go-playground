@@ -71,6 +71,7 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 type apiConfig struct {
 	fileserverHits int
 	jwtSecret      string
+	polkaApi       string
 }
 
 // A simple middleware that inserts a handler in between
