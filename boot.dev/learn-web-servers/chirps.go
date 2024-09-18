@@ -81,6 +81,25 @@ func (s serverState) handleChirpsApi() {
 			chirps = filteredChirps
 		}
 
+		sortOrder := r.URL.Query().Get("sort")
+		if sortOrder == "" {
+			sortOrder = "asc"
+		}
+
+		switch sortOrder {
+		case "desc":
+			chirps = slices.SortedFunc(slices.Values(chirps), func(a, b chirpydb.Chirp) int {
+				return b.Id - a.Id
+			})
+		case "asc":
+			chirps = slices.SortedFunc(slices.Values(chirps), func(a, b chirpydb.Chirp) int {
+				return a.Id - b.Id
+			})
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
 		respondWithJSON(w, http.StatusOK, chirps)
 	})
 

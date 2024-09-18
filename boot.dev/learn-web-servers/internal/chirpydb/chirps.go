@@ -41,11 +41,7 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 		return []Chirp{}, err
 	}
 
-	chirps := slices.SortedFunc(maps.Values(dbStruct.Chirps.Items), func(a, b Chirp) int {
-		return a.Id - b.Id
-	})
-
-	return chirps, nil
+	return slices.Collect(maps.Values(dbStruct.Chirps.Items)), nil
 }
 
 func (db *DB) GetChirp(id int) (Chirp, error) {
