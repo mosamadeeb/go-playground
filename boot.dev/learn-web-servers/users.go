@@ -13,14 +13,16 @@ import (
 
 // Mirrors User but with password removed
 type userRes struct {
-	Id    int    `json:"id"`
-	Email string `json:"email"`
+	Id          int    `json:"id"`
+	Email       string `json:"email"`
+	IsChirpyRed bool   `json:"is_chirpy_red"`
 }
 
 func createUserRes(u chirpydb.User) userRes {
 	return userRes{
 		u.Id,
 		u.Email,
+		u.IsChirpyRed,
 	}
 }
 

@@ -10,6 +10,8 @@ type User struct {
 
 	// We should not be marshalling passwords, but our database is in JSON so we have to lol
 	Password string `json:"password"`
+
+	IsChirpyRed bool `json:"is_chirpy_red"`
 }
 
 // Creates a new user and saves it to disk
@@ -33,6 +35,7 @@ func (db *DB) CreateUser(email string, password string) (User, error) {
 		dbStruct.Users.IdCount,
 		email,
 		password,
+		false,
 	}
 
 	dbStruct.Users.IdCount++
@@ -89,4 +92,25 @@ func (db *DB) UpdateUser(id int, email, password string) (User, error) {
 	}
 
 	return user, nil
+}
+
+func (db *DB) SetUserChirpyRed(userId int, isChirpyRed bool) error {
+	dbStruct, err := db.loadDB()
+	if err != nil {
+		return err
+	}
+
+	user, ok := dbStruct.Users.Items[userId]
+	if !ok {
+		return ErrNotExist
+	}
+
+	user.IsChirpyRed = isChirpyRed
+	dbStruct.Users.Items[userId] = user
+
+	if err := db.writeDB(dbStruct); err != nil {
+		return err
+	}
+
+	return nil
 }

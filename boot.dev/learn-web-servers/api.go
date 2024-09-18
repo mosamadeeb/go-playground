@@ -36,6 +36,7 @@ func (s serverState) handleApi() {
 	})
 
 	s.handleAuthApi()
+	s.handleWebhooks()
 
 	// CRUD endpoints
 	s.handleChirpsApi()
