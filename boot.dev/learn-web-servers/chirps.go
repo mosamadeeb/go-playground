@@ -64,6 +64,23 @@ func (s serverState) handleChirpsApi() {
 			return
 		}
 
+		if authorIdStr := r.URL.Query().Get("author_id"); authorIdStr != "" {
+			authorId, err := strconv.Atoi(authorIdStr)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			filteredChirps := make([]chirpydb.Chirp, 0, len(chirps))
+			for _, c := range chirps {
+				if c.AuthorId == authorId {
+					filteredChirps = append(filteredChirps, c)
+				}
+			}
+
+			chirps = filteredChirps
+		}
+
 		respondWithJSON(w, http.StatusOK, chirps)
 	})
 
