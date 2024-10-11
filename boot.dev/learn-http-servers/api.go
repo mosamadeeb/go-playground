@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/mosamadeeb/chirpy/internal/database"
 )
 
@@ -16,7 +18,7 @@ func handleApi(mux *http.ServeMux, apiCfg *apiConfig) {
 	mux.Handle("GET /admin/metrics", apiCfg.adminMetricsHandler())
 
 	// Metrics
-	mux.Handle("/api/reset", apiCfg.resetHandler())
+	mux.Handle("/admin/reset", apiCfg.resetHandler())
 
 	// Readiness endpoint
 	mux.HandleFunc("GET /api/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -49,6 +51,28 @@ func handleApi(mux *http.ServeMux, apiCfg *apiConfig) {
 		}
 
 		respondWithJSON(w, http.StatusOK, cleanedResp{cleanChirp(chirpBody.Body)})
+	})
+
+	// User endpoints
+	mux.HandleFunc("POST /api/users", func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Email string `json:"email"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			log.Printf("Error decoding request body: %s\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		user, err := apiCfg.db.CreateUser(r.Context(), body.Email)
+		if err != nil {
+			log.Printf("Error creating user in database: %s\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		respondWithJSON(w, http.StatusCreated, User{user.ID, user.CreatedAt, user.UpdatedAt, user.Email})
 	})
 }
 
@@ -93,6 +117,7 @@ func cleanChirp(body string) string {
 type apiConfig struct {
 	fileserverHits int
 	db             *database.Queries
+	platform       string
 }
 
 // A simple middleware that inserts a handler in between
@@ -107,7 +132,17 @@ func (c *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 // We can return a handler by wrapping a function with an appropriate signature with http.HandlerFunc()
 func (c *apiConfig) resetHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if c.platform != "dev" {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
 		c.fileserverHits = 0
+
+		// Delete everything from the DB!!
+		c.db.DeleteAllUsers(r.Context())
+
+		w.WriteHeader(http.StatusOK)
 	})
 }
 
@@ -123,4 +158,11 @@ func (c *apiConfig) adminMetricsHandler() http.Handler {
 
 </html>`, c.fileserverHits)))
 	})
+}
+
+type User struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
 }

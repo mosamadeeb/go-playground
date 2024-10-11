@@ -22,7 +22,7 @@ func main() {
 	}
 
 	dbQueries := database.New(db)
-	apiCfg := apiConfig{db: dbQueries}
+	apiCfg := apiConfig{db: dbQueries, platform: os.Getenv("PLATFORM")}
 
 	mux := http.NewServeMux()
 	serve := http.Server{
