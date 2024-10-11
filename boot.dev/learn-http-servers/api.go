@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+
+	"github.com/mosamadeeb/chirpy/internal/database"
 )
 
 func handleApi(mux *http.ServeMux, apiCfg *apiConfig) {
@@ -90,6 +92,7 @@ func cleanChirp(body string) string {
 
 type apiConfig struct {
 	fileserverHits int
+	db             *database.Queries
 }
 
 // A simple middleware that inserts a handler in between
