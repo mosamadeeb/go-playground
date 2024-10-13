@@ -29,10 +29,11 @@ func handleApi(mux *http.ServeMux, apiCfg *apiConfig) {
 		w.Write([]byte("OK"))
 	})
 
-	// Chirp validation endpoint
-	mux.HandleFunc("POST /api/validate_chirp", func(w http.ResponseWriter, r *http.Request) {
+	// Chirp endpoints
+	mux.HandleFunc("POST /api/chirps", func(w http.ResponseWriter, r *http.Request) {
 		var chirpBody struct {
-			Body string `json:"body"`
+			Body   string `json:"body"`
+			UserId string `json:"user_id"`
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&chirpBody); err != nil {
@@ -46,11 +47,27 @@ func handleApi(mux *http.ServeMux, apiCfg *apiConfig) {
 			return
 		}
 
-		type cleanedResp struct {
-			Body string `json:"cleaned_body"`
+		cleanedBody := cleanChirp(chirpBody.Body)
+		userId, err := uuid.Parse(chirpBody.UserId)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
 		}
 
-		respondWithJSON(w, http.StatusOK, cleanedResp{cleanChirp(chirpBody.Body)})
+		chirp, err := apiCfg.db.CreateChirp(r.Context(), database.CreateChirpParams{Body: cleanedBody, UserID: userId})
+		if err != nil {
+			log.Printf("Error creating chirp in database: %s\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		respondWithJSON(w, http.StatusCreated, Chirp{
+			chirp.ID,
+			chirp.CreatedAt,
+			chirp.UpdatedAt,
+			chirp.Body,
+			chirp.UserID.String(),
+		})
 	})
 
 	// User endpoints
@@ -165,4 +182,12 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
+}
+
+type Chirp struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Body      string    `json:"body"`
+	UserId    string    `json:"user_id"`
 }
