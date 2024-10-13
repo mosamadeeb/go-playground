@@ -92,6 +92,31 @@ func handleApi(mux *http.ServeMux, apiCfg *apiConfig) {
 		respondWithJSON(w, http.StatusCreated, chirpsArr)
 	})
 
+	mux.HandleFunc("GET /api/chirps/{chirpID}", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("chirpID")
+
+		chirp_id, err := uuid.Parse(id)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		chirp, err := apiCfg.db.GetChirp(r.Context(), chirp_id)
+		if err != nil {
+			log.Printf("Error reading chirp from database: %s\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		respondWithJSON(w, http.StatusOK, Chirp{
+			chirp.ID,
+			chirp.CreatedAt,
+			chirp.UpdatedAt,
+			chirp.Body,
+			chirp.UserID.String(),
+		})
+	})
+
 	// User endpoints
 	mux.HandleFunc("POST /api/users", func(w http.ResponseWriter, r *http.Request) {
 		var body struct {
