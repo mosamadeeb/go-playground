@@ -70,6 +70,28 @@ func handleApi(mux *http.ServeMux, apiCfg *apiConfig) {
 		})
 	})
 
+	mux.HandleFunc("GET /api/chirps", func(w http.ResponseWriter, r *http.Request) {
+		chirps, err := apiCfg.db.GetChirps(r.Context())
+		if err != nil {
+			log.Printf("Error reading chirps from database: %s\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		chirpsArr := make([]Chirp, len(chirps))
+		for i := range len(chirps) {
+			chirpsArr[i] = Chirp{
+				chirps[i].ID,
+				chirps[i].CreatedAt,
+				chirps[i].UpdatedAt,
+				chirps[i].Body,
+				chirps[i].UserID.String(),
+			}
+		}
+
+		respondWithJSON(w, http.StatusCreated, chirpsArr)
+	})
+
 	// User endpoints
 	mux.HandleFunc("POST /api/users", func(w http.ResponseWriter, r *http.Request) {
 		var body struct {
